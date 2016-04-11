@@ -1,0 +1,2 @@
+#!/usr/bin/env node
+require('../sensorlab-cli.js');
