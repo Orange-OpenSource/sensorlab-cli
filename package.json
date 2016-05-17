@@ -1,6 +1,6 @@
 {
   "name": "sensorlab-cli",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "preferGlobal": true,
   "directories": {
     "bin": "./bin"
@@ -22,11 +22,12 @@
   "author": "Quentin Lampin <quentin.lampin@orange.com>",
   "license": "MPL-2.0",
   "dependencies": {
-    "bonjour": "^3.2.2",
+    "bonjour": "^3.5.0",
     "debug": "^2.2.0",
+    "grunt-eslint": "^18.1.0",
     "q": "^1.4.1",
     "sensorlab-commands": "^1.0.2",
-    "vorpal": "^1.10.8",
+    "vorpal": "^1.10.10",
     "vorpal-autocomplete-fs": "0.0.3"
   },
   "devDependencies": {
