@@ -14,10 +14,12 @@ var bonjour = require('bonjour')(),
     vorpal = require('vorpal')(),
     vorpalAutocompleteFs = require('vorpal-autocomplete-fs'),
     commands = require('sensorlab-commands'),
+    Collector = require('sensorlab-collector'),
     fs = require('fs'),
     Q = require('q');
 
 var observers,
+    collectors,
     browser,
     helpers;
 
@@ -64,12 +66,24 @@ helpers.format.error.observerNotSupplied = function(){
     return vorpal.chalk.red('error: no observer ID supplied');
 };
 
+helpers.format.error.unknownExperimentCollector = function(experiment_id, collectors){
+    var collectorsList;
+
+    collectorsList = Object.keys(collectors).sort();
+    return vorpal.chalk.red('error: unknown experiment collector: '+experiment_id+'. list of known collectors: '
+        + collectorsList.join(', '));
+};
+
 helpers.format.error.commandError = function(errorSummary){
-  return vorpal.chalk.red('error: ' + errorSummary.error + ' with response: ' + errorSummary.response + ' and body: '+ errorSummary.body);
+  return vorpal.chalk.red(errorSummary.body);
 };
 
 helpers.format.uids = function (uids) {
     return uids.join(', ');
+};
+
+helpers.format.collectors = function(collectors){
+    return collectors.join(', ');
 };
 
 helpers.format.state = function(state){
@@ -106,8 +120,9 @@ helpers.format.property = function(property){
 helpers.format.node = {};
 helpers.format.node.status = function(status){
     return  vorpal.chalk.yellow('observer ' + status.id)+
-            ' device: ' + helpers.format.state(status.state) +
-            ' serial: ' + vorpal.chalk.blue(status.serial.module);
+            ' (' + vorpal.chalk.green(status.hardware.id) + ') ' +
+            'state: ' + helpers.format.state(status.hardware.state)+
+            ' firmware: ' + helpers.format.property(status.hardware.firmware);
 };
 
 helpers.format.experiment = {};
@@ -126,11 +141,18 @@ helpers.format.experiment.duration = function(behavior){
 };
 helpers.format.experiment.status = function(uid, status){
     var format;
-    format = vorpal.chalk.yellow('observer ' + uid)+
-        ' behavior: ' + helpers.format.experiment.behavior (status.id) +
-        ' state: ' + helpers.format.state(status.state) +
-        ' remaining/duration: ' + helpers.format.property(status.scheduler.remaining) +'/'
-                                + helpers.format.property(status.scheduler.duration);
+
+    format = vorpal.chalk.yellow('observer ' + uid);
+    if(status.experiment){
+          format += ' id: ' + helpers.format.experiment.behavior(status.experiment.id) +
+          ' state: ' + helpers.format.state(status.experiment.state);
+          if(status.experiment.state === 'running'){
+            format += ' remaining: ' + helpers.format.property(status.experiment.remaining);
+          }
+          format += ' duration: ' + helpers.format.property(status.experiment.duration);
+    }else{
+        format += ' experiment: ' + helpers.format.state('undefined');
+    }
     return format;
 };
 
@@ -138,9 +160,8 @@ helpers.format.io = {};
 helpers.format.io.status = function(uid, status){
     var format;
     format = vorpal.chalk.yellow('observer ' + uid)+
-        ' state: ' + helpers.format.state(status.state) +
-        ' broker: ' + helpers.format.property(status.broker_address) + ':' + helpers.format.property(status.broker_port) +
-        ' source: ' + helpers.format.property(status.source);
+        ' address: ' + helpers.format.property(status.address) + ':' + helpers.format.property(status.port) +
+        ' state: ' + helpers.format.state(status.state);
     return format;
 };
 
@@ -250,8 +271,30 @@ helpers.vorpal.action = function(target, command, params, args, callback){
         .then(callback);
 };
 
+helpers.collectors = {};
+helpers.collectors.create = function(broker_address, broker_port, experiment_id, type,callback){
+    
+    collectors[experiment_id] = new Collector(broker_address, broker_port, experiment_id, type);
+    collectors[experiment_id].start();
+    callback();
+};
+helpers.collectors.destroy = function(experiment_id, callback){
+    if(collectors[experiment_id]){
+        collectors[experiment_id].end();
+        delete collectors[experiment_id];
+        callback();
+    }else{
+        vorpal.log(helpers.format.error.unknownExperimentCollector(experiment_id, collectors));
+        callback();
+    }
+};
+
+helpers.collectors.autocomplete = function(){
+    return Object.keys(collectors).map(String);
+};
 
 observers = {};
+collectors = {};
 
 browser = bonjour.find({type: 'http', protocol: 'tcp', subtypes: ['observer', 'rest']})
     .on('up', helpers.services.register.bind(null, observers))
@@ -263,9 +306,19 @@ vorpal
     .alias('list')
     .action(function (args, callback) {
         var uids;
-
+        browser.update();
         uids = Object.keys(observers).sort();
         vorpal.log(helpers.format.uids(uids));
+        callback();
+    });
+
+vorpal
+    .command('collectors', 'list of collectors', {})
+    .alias('clist')
+    .action(function (args, callback) {
+        var cols;
+        cols = Object.keys(collectors).sort();
+        vorpal.log(helpers.format.collectors(cols));
         callback();
     });
 
@@ -357,11 +410,25 @@ vorpal
     .autocomplete({data:helpers.observers.autocomplete})
     .action(helpers.vorpal.action.bind(this,'io','stop',[]));
 vorpal
-    .command('io setup <source> <address> <port> <keepalive_period> [observers...]', 'configure io modules of supplied list of observers', {})
+    .command('io setup <address> <port> [observers...]', 'configure io modules of supplied list of observers', {})
     .alias('iosetup')
     .autocomplete({data:helpers.observers.autocomplete})
     .action(function (args, callback) {
-        helpers.vorpal.action.bind(this,'io','setup',[args.source, args.address, args.port, args.keepalive_period])(args, callback);
+        helpers.vorpal.action.bind(this,'io','setup',[args.address, args.port])(args, callback);
+    });
+/* Collector commands */
+vorpal
+    .command('collector setup <address> <port> <experiment_id> <type>', 'setup log collection', {})
+    .alias('csetup')
+    .action(function (args, callback){
+        helpers.collectors.create(args.address, args.port, args.experiment_id,  args.type, callback);
+    });
+vorpal
+    .command('collector stop <experiment_id>', 'stop log collection', {})
+    .alias('cstop')
+    .autocomplete({data:helpers.collectors.autocomplete})
+    .action(function (args, callback){
+        helpers.collectors.destroy(args.experiment_id, callback);
     });
 
 /* location commands */
