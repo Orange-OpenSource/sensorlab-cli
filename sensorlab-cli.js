@@ -75,7 +75,11 @@ helpers.format.error.unknownExperimentCollector = function(experiment_id, collec
 };
 
 helpers.format.error.commandError = function(errorSummary){
-  return vorpal.chalk.red(errorSummary.body);
+  if(errorSummary.body){
+      return vorpal.chalk.red(errorSummary.body);
+  } else {
+      return vorpal.chalk.red(errorSummary.error);
+  }
 };
 
 helpers.format.uids = function (uids) {
@@ -354,15 +358,31 @@ vorpal
     .alias('nload')
     .autocomplete(vorpalAutocompleteFs())
     .action(function (args, callback) {
-        helpers.vorpal.action.bind(this,'node','load',[args.firmware_id, fs.createReadStream(args.firmware)])(args, callback);
+        try {
+            helpers.vorpal.action.bind(this,'node','load',[args.firmware_id, fs.createReadStream(args.firmware)])(args, callback);
+        } catch (exception) {
+            vorpal.log(vorpal.chalk.red('cannot read firmware ['+args.firmware+']\n. Error: '+exception));
+            callback();
+        }
     });
 vorpal
     .command('node setup <profile> [observers...]', 'configure node modules of supplied list of observers', {})
     .alias('nsetup')
     .autocomplete(vorpalAutocompleteFs())
     .action(function (args, callback) {
+        try {
             helpers.vorpal.action.bind(this,'node','setup',[fs.createReadStream(args.profile)])(args, callback);
+        } catch (exception) {
+            vorpal.log(vorpal.chalk.red('cannot read profile ['+args.profile+']\n. Error: '+exception));
+            callback();
+        }
     });
+
+vorpal
+    .command('node reset [observers...]', 'reset node modules of supplied list of observers', {})
+    .alias('nreset')
+    .autocomplete({data:helpers.observers.autocomplete})
+    .action(helpers.vorpal.action.bind(this,'node','reset',[]));
 
 /* experiment commands */
 vorpal
@@ -390,7 +410,12 @@ vorpal
     .alias('esetup')
     .autocomplete(vorpalAutocompleteFs())
     .action(function (args, callback) {
-        helpers.vorpal.action.bind(this,'experiment','setup',[args.experiment_id, fs.createReadStream(args.behavior)])(args, callback);
+        try{
+            helpers.vorpal.action.bind(this,'experiment','setup',[args.experiment_id, fs.createReadStream(args.behavior)])(args, callback);
+        } catch (exception) {
+            vorpal.log(vorpal.chalk.red('cannot read behavior ['+args.behavior+']\n. Error: '+exception));
+            callback();
+        }
     });
 
 /* I/O commands */
@@ -420,6 +445,7 @@ vorpal
 vorpal
     .command('collector setup <address> <port> <experiment_id> <type>', 'setup log collection', {})
     .alias('csetup')
+    .help(function(args){})
     .action(function (args, callback){
         helpers.collectors.create(args.address, args.port, args.experiment_id,  args.type, callback);
     });
