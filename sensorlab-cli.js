@@ -10,7 +10,7 @@
  */
 
 
-var bonjour = require('bonjour')(),
+var mdns = require('mdns-spawn'),
     vorpal = require('vorpal')(),
     vorpalAutocompleteFs = require('vorpal-autocomplete-fs'),
     commands = require('sensorlab-commands'),
@@ -29,15 +29,15 @@ helpers.services = {};
 helpers.services.register = function(observers, service){
     var match, uid;
 
-    if ( !!(match = /observer-(\d+)/.exec(service.name)) ) {
+    if ( !!(match = /observer-(\d+)/.exec(service.service_name)) ) {
         uid = match[1];
-        observers[uid] = { 'uid': uid, 'commands': commands(service.host, service.port, true) };
+        observers[uid] = { 'uid': uid, 'commands': commands(service.service_name+'.local', '5555', true) };
     }
 };
 helpers.services.deregister = function(observers, service){
     var match, uid;
 
-    if ( !!(match = /observer-(\d+)/.exec(service.name)) ) {
+    if ( !!(match = /observer-(\d+)/.exec(service.service_name)) ) {
         uid = match[1];
         delete observers[uid];
     }
@@ -121,6 +121,58 @@ helpers.format.property = function(property){
     }
 };
 
+helpers.format.observer = {};
+helpers.format.observer.status = function(status){
+    var output = vorpal.chalk.yellow('observer ' + status.node.id);
+    output += ' :: node: ';
+    if(status.node.hardware.id !== 'undefined'){
+        output += vorpal.chalk.green(status.node.hardware.id);
+    }else{
+        output += vorpal.chalk.red('not configured');
+    }
+    output += ' :: experiment: ';
+
+    if(status.node.experiment == undefined){
+        output += vorpal.chalk.red('not configured');
+    }else{
+        switch (status.node.experiment.state){
+            case 'ready':
+                output += vorpal.chalk.blue(status.node.experiment.id);
+                break;
+            case 'running':
+                output += vorpal.chalk.green(status.node.experiment.id);
+                output += ' remaining: ' + helpers.format.property(status.node.experiment.remaining);
+                break;
+            case 'halted':
+                output += vorpal.chalk.red(status.node.experiment.id);
+                break;
+            default:
+                output += vorpal.chalk.grey(status.node.experiment.id);
+                break;
+        }
+    }
+    output += ' :: I/Os: ';
+    if(status.io.address == 'undefined'){
+        output += vorpal.chalk.red('not configured');
+    } else {
+        switch(status.io.state){
+            case 'disconnected':
+                output += ' '+ vorpal.chalk.red(status.io.address+':'+status.io.port + '(not connected)');
+                break;
+            case 'ready':
+                output += ' ' + vorpal.chalk.yellow(status.io.address+':'+status.io.port + '(ready)');
+                break;
+            case 'connecting':
+                output += ' ' + vorpal.chalk.blue(status.io.address+':'+status.io.port + '(connecting)');
+                break;
+            case 'connected':
+                output += ' ' + vorpal.chalk.green(status.io.address+':'+status.io.port + '(connected)');
+                break;
+        }
+    }
+    return output;
+};
+
 helpers.format.node = {};
 helpers.format.node.status = function(status){
     return  vorpal.chalk.yellow('observer ' + status.id)+
@@ -193,7 +245,28 @@ helpers.format.location.status = function(uid, status){
     return format;
 };
 
+helpers.format.system = {};
+helpers.format.system.status = function(uid, status){
+    var format;
+
+    format = vorpal.chalk.yellow('observer ' + uid) +
+        ' (' + helpers.format.property('v'+status.version) + ') ::' +
+        ' clock source: ' + helpers.format.property(status.synchronization.source) +
+        ' clock offset: ' + helpers.format.property(status.synchronization.offset) +
+        ' (standard deviation: ' + helpers.format.property(status.synchronization.offset_std) + ')';
+    return format;
+};
+
 helpers.output = {};
+
+helpers.output.observer = {};
+helpers.output.observer.statuses = function(uids, statuses){
+    statuses.forEach(function(status){
+        vorpal.log(helpers.format.observer.status(status));
+    });
+};
+helpers.output.root = helpers.output.observer;
+
 helpers.output.node = {};
 helpers.output.node.statuses = function(uids, statuses){
     statuses.forEach(function(status){
@@ -219,6 +292,13 @@ helpers.output.location = {};
 helpers.output.location.statuses = function(uids, statuses){
     statuses.forEach(function(status, index){
         vorpal.log(helpers.format.location.status(uids[index], status));
+    });
+};
+
+helpers.output.system = {};
+helpers.output.system.statuses = function(uids, statuses){
+    statuses.forEach(function(status, index){
+        vorpal.log(helpers.format.system.status(uids[index], status));
     });
 };
 
@@ -300,17 +380,16 @@ helpers.collectors.autocomplete = function(){
 observers = {};
 collectors = {};
 
-browser = bonjour.find({type: 'http', protocol: 'tcp', subtypes: ['observer', 'rest']})
-    .on('up', helpers.services.register.bind(null, observers))
-    .on('down', helpers.services.deregister.bind(null, observers));
-
+browser = new mdns();
+browser.addEvent('serviceUp', helpers.services.register.bind(null, observers));
+browser.addEvent('serviceDown', helpers.services.deregister.bind(null, observers));
+browser.start();
 
 vorpal
     .command('observers', 'list of observers', {})
     .alias('list')
     .action(function (args, callback) {
         var uids;
-        browser.update();
         uids = Object.keys(observers).sort();
         vorpal.log(helpers.format.uids(uids));
         callback();
@@ -326,11 +405,11 @@ vorpal
         callback();
     });
 
-// vorpal
-//     .command('observer status [observers...]', 'require statuses of supplied list of observers', {})
-//     .alias('ostatus')
-//     .autocomplete({data:helpers.observers.autocomplete})
-//     .action(helpers.vorpal.action.bind(this,'root','status',[]));
+vorpal
+    .command('observer status [observers...]', 'require statuses of supplied list of observers', {})
+    .alias('ostatus')
+    .autocomplete({data:helpers.observers.autocomplete})
+    .action(helpers.vorpal.action.bind(this,'root','status',[]));
 
 /* node commands */
 vorpal
@@ -480,6 +559,22 @@ vorpal
     .action(function (args, callback) {
         helpers.vorpal.action.bind(this,'location','setup',[args.latitude, args.longitude])(args, callback);
     });
+vorpal
+    .command(' system status [observers...]', 'require system status, i.e. version and sync status of supplied list of observers', {})
+    .alias('sstatus')
+    .autocomplete({data:helpers.observers.autocomplete})
+    .action(helpers.vorpal.action.bind(this,'system','status',[]));
+vorpal
+    .command(' system version [observers...]', 'require system version of supplied list of observers', {})
+    .alias('sversion')
+    .autocomplete({data:helpers.observers.autocomplete})
+    .action(helpers.vorpal.action.bind(this,'system','version',[]));
+vorpal
+    .command(' system synchronization [observers...]', 'require synchronization status of supplied list of observers', {})
+    .alias('ssync')
+    .autocomplete({data:helpers.observers.autocomplete})
+    .action(helpers.vorpal.action.bind(this,'system','synchronization',[]));
+
 
 vorpal
     .delimiter(vorpal.chalk.green('>'))
