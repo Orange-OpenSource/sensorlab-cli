@@ -177,8 +177,9 @@ helpers.format.node = {};
 helpers.format.node.status = function(status){
     return  vorpal.chalk.yellow('observer ' + status.id)+
             ' (' + vorpal.chalk.green(status.hardware.id) + ') ' +
-            'state: ' + helpers.format.state(status.hardware.state)+
-            ' firmware: ' + helpers.format.property(status.hardware.firmware);
+            'state: ' + helpers.format.state(status.hardware.state) +
+            ' firmware: ' + helpers.format.property(status.hardware.firmware) +
+            ' checksum: ' + helpers.format.property(status.hardware.checksum);
 };
 
 helpers.format.experiment = {};
@@ -384,6 +385,116 @@ browser = new mdns();
 browser.addEvent('serviceUp', helpers.services.register.bind(null, observers));
 browser.addEvent('serviceDown', helpers.services.deregister.bind(null, observers));
 browser.start();
+
+/* store history */
+vorpal.history('sensorlab-cli');
+
+/* usage memo */
+vorpal
+    .command('memo', 'workflow reminder', {})
+    .alias('workflow')
+    .action(function(args, callback){
+       vorpal.log(
+           vorpal.chalk.yellow(
+               vorpal.chalk.bold(
+           " # 0. Prerequisites                                                        \n"
+                )
+           )+
+           " ------------------------------------------------------------------------- \n"+
+           " - query the observers state:                                              \n"+
+           "   > "+vorpal.chalk.cyan("observer status <list of observers>")+"                                  \n"+
+           "                                                                           \n"+
+           " - if an experiment is already running, contact the owner.                 \n"+
+           "          DO NOT STOP a RUNNING EXPERIMENT UNLESS IT'S YOURS!              \n"+
+           "                                                                           \n"+
+           " - stop any existing experiment and reset the experiment handler:          \n"+
+           "   > "+vorpal.chalk.cyan("experiment stop <list of observers>")+"                                   \n"+
+           "   > "+vorpal.chalk.cyan("experiment reset <list of observers>")+"                                  \n"+
+           "                                                                           \n"+
+           " - query the I/Os state:                                                   \n"+
+           "   > "+vorpal.chalk.cyan("io status <list of observers>")+"                                         \n"+
+           "                                                                           \n"+
+           " - if the MQTT broker address and port are not defined, provide them:      \n"+
+           "   > "+vorpal.chalk.cyan("io setup <broker address> <broker port> <list of observers>")+"           \n"+
+           "                                                                           \n"+
+           " - query the I/Os state:                                                   \n"+
+           "   > "+vorpal.chalk.cyan("io status <list of observers>")+"                                         \n"+
+           "                                                                           \n"+
+           " - if the I/O handler is connected jump to section "+vorpal.chalk.yellow("#1")+"                       \n"+
+           " - otherwise initiate the connection:                                      \n"+
+           "   > "+vorpal.chalk.cyan("io start <list of observers>")+"                                          \n"+
+           "                                                                           \n"+
+           " - verify that the change is in effect:                                    \n"+
+           "   > "+vorpal.chalk.cyan("io status <list of observers>")+"                                         \n"+
+           "                                                                           \n"+
+           vorpal.chalk.yellow(
+               vorpal.chalk.bold(
+           " # 1. interfacing the observer with the device                             \n"
+               )
+           )+
+           " ------------------------------------------------------------------------- \n"+
+           " - query the current device interface:                                     \n"+
+           "   > "+vorpal.chalk.cyan("node status <list of observers>")+"                                       \n"+
+           "                                                                           \n"+
+           " - if the interface matches the current device, jump to section "+vorpal.chalk.yellow("#2")+"          \n"+
+           " - otherwise upload the interface:                                         \n"+
+           "   > "+vorpal.chalk.cyan("node setup <profile.tar.gz> <list of observers>")+"                       \n"+
+           "                                                                           \n"+
+           " - verify that the change is in effect:                                    \n"+
+           "   > "+vorpal.chalk.cyan("node status <list of observers>")+"                                       \n"+
+           "                                                                           \n"+
+           vorpal.chalk.yellow(
+               vorpal.chalk.bold(" # 2. upload the experiment                                                \n"
+               )
+           )+
+           " ------------------------------------------------------------------------- \n"+
+           " - upload the experiment profile:                                          \n"+
+           "   > "+vorpal.chalk.cyan("experiment setup <experiment_id> <profile.tar.gz> <list of observers>")+" \n"+
+           "                                                                           \n"+
+           " - query the experiment handler status:                                    \n"+
+           "   > "+vorpal.chalk.cyan("experiment status <list of observers>")+"                                 \n"+
+           "                                                                           \n"+
+           vorpal.chalk.yellow(
+               vorpal.chalk.bold(" # 3. setup an experiment collector (optional)                             \n"
+               )
+           )+
+           " ------------------------------------------------------------------------- \n"+
+           " - setup a collector for the log trace you're interested in (json,pcap):   \n"+
+           "   > "+vorpal.chalk.cyan("collector setup <experiment_id> <type: json or pcap>")+"                  \n"+
+           "                                                                           \n"+
+           vorpal.chalk.yellow(
+               vorpal.chalk.bold(" # 4. start the experiment                                                 \n"
+               )
+           )+
+           " ------------------------------------------------------------------------- \n"+
+           " - start the experiment scheduler:                                         \n"+
+           "   > "+vorpal.chalk.cyan("experiment start <list of observers>")+"                                  \n"+
+           "                                                                           \n"+
+           " - query the experiment handler status                                     \n"+
+           "   > "+vorpal.chalk.cyan("experiment status <list of observers>")+"                                 \n"+
+           "                                                                           \n"+
+           vorpal.chalk.yellow(
+               vorpal.chalk.bold(" # 5. clean-up                                                             \n"
+               )
+           )+
+           " ------------------------------------------------------------------------- \n"+
+           " - at the end of the experiment, discard collectors:                       \n"+
+           "   > "+vorpal.chalk.cyan("collector stop <experiment_id>")+"                                        \n"+
+           "                                                                           \n"+
+           vorpal.chalk.yellow(
+               vorpal.chalk.bold(" # 42. friendly reminder                                                   \n"
+               )
+           )+
+           " ------------------------------------------------------------------------- \n"+
+           " - this is a PoC, not some kind of Apollo-grade software                   \n"+
+           " - even Apollo-grade mission can go wrong, Apollo 13 anyone?               \n"+
+           " - Nobody has voodoo powers, provide detailed analysis of your    \n"+
+           "   issues in a github issue.                                                             \n"+
+           " - Refrain from sending mails containing exclamation marks, urgent sign    \n"+
+           "   superlative, etc. It's offensive.                                       \n"
+       );
+        callback();
+    });
 
 vorpal
     .command('observers', 'list of observers', {})
