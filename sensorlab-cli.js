@@ -764,6 +764,7 @@ vorpal
     .command('version', 'returns sensorlab-cli version',{})
     .action(function (args, callback) {
         vorpal.log('version: ' + version);
+        callback();
     });
 
 
