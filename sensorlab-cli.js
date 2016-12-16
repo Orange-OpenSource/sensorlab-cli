@@ -16,7 +16,8 @@ var mdns = require('mdns-spawn'),
     commands = require('sensorlab-commands'),
     Collector = require('sensorlab-collector'),
     fs = require('fs'),
-    Q = require('q');
+    Q = require('q'),
+    version = require('./package.json').version;
 
 var observers,
     collectors,
@@ -258,10 +259,46 @@ helpers.format.system.status = function(uid, status){
     return format;
 };
 
+helpers.format.system.log = function(uid, log){
+    var format;
+    format = '';
+    log.log.split('\n').forEach(function(line){
+        if(/ERROR/.exec(line)){
+            format += vorpal.chalk.red(line) +'\n';
+        }else if(/WARNING/.exec(line)){
+            format += vorpal.chalk.yellow(line) +'\n';
+        }else if(/INFO/.exec(line)){
+            format += vorpal.chalk.yellow(line) +'\n';
+        }else if(/DEBUG/.exec(line)){
+            format += vorpal.chalk.white(line) +'\n';
+        }else{
+            format += line +'\n';
+        }
+    });
+    return format;
+};
+
+helpers.format.system.synchronization = function(uid, synchronization){
+    var format;
+    format = vorpal.chalk.yellow('observer ' + uid) +
+        ' clock: ' + helpers.format.property(synchronization['date']) +
+        ' clock source: ' + helpers.format.property(synchronization['sync_source']) +
+        ' clock offset: ' + helpers.format.property(synchronization['offset']) +
+        ' (standard deviation: ' + helpers.format.property(synchronization.offset_std) + ')';
+    return format;
+};
+
+helpers.format.system.version = function(uid, version){
+    var format;
+    format = vorpal.chalk.yellow('observer ' + uid) +
+        ' version: ' + helpers.format.property(version.version);
+    return format;
+};
+
 helpers.output = {};
 
 helpers.output.observer = {};
-helpers.output.observer.statuses = function(uids, statuses){
+helpers.output.observer.status = function(uids, statuses){
     statuses.forEach(function(status){
         vorpal.log(helpers.format.observer.status(status));
     });
@@ -269,37 +306,68 @@ helpers.output.observer.statuses = function(uids, statuses){
 helpers.output.root = helpers.output.observer;
 
 helpers.output.node = {};
-helpers.output.node.statuses = function(uids, statuses){
+helpers.output.node.status =
+helpers.output.node.setup =
+helpers.output.node.start =
+helpers.output.node.stop =
+helpers.output.node.reset = function(uids, statuses){
     statuses.forEach(function(status){
         vorpal.log(helpers.format.node.status(status));
     });
 };
 
 helpers.output.experiment = {};
-helpers.output.experiment.statuses = function(uids, statuses){
+helpers.output.experiment.status =
+helpers.output.experiment.setup =
+helpers.output.experiment.start =
+helpers.output.experiment.stop =
+helpers.output.experiment.reset = function(uids, statuses){
     statuses.forEach(function(status, index){
         vorpal.log(helpers.format.experiment.status(uids[index], status));
     });
 };
 
 helpers.output.io = {};
-helpers.output.io.statuses = function(uids, statuses){
+helpers.output.io.status =
+helpers.output.io.setup =
+helpers.output.io.start =
+helpers.output.io.stop =
+    function(uids, statuses){
     statuses.forEach(function(status, index){
         vorpal.log(helpers.format.io.status(uids[index], status));
     });
 };
 
 helpers.output.location = {};
-helpers.output.location.statuses = function(uids, statuses){
+helpers.output.location.status = function(uids, statuses){
     statuses.forEach(function(status, index){
         vorpal.log(helpers.format.location.status(uids[index], status));
     });
 };
 
 helpers.output.system = {};
-helpers.output.system.statuses = function(uids, statuses){
+helpers.output.system.status = function(uids, statuses){
     statuses.forEach(function(status, index){
         vorpal.log(helpers.format.system.status(uids[index], status));
+    });
+};
+
+helpers.output.system.log = function(uids, logs){
+    logs.forEach(function(log, index){
+        vorpal.log(helpers.format.system.log(uids[index], log));
+    });
+};
+
+helpers.output.system.version = function(uids, versions){
+    versions.forEach(function(version, index){
+        vorpal.log(helpers.format.system.version(uids[index], version));
+    });
+};
+
+
+helpers.output.system.synchronization = function(uids, synchronizations){
+    synchronizations.forEach(function(synchronization, index){
+        vorpal.log(helpers.format.system.synchronization(uids[index], synchronization));
     });
 };
 
@@ -352,7 +420,7 @@ helpers.vorpal.action = function(target, command, params, args, callback){
         promises.push( observers[uid].commands[target][command].apply(this, params) );
     });
     Q.all(promises)
-        .then(helpers.output[target].statuses.bind(null, uids), helpers.output.error.commandError)
+        .then(helpers.output[target][command].bind(null, uids), helpers.output.error.commandError)
         .then(callback);
 };
 
@@ -517,14 +585,14 @@ vorpal
     });
 
 vorpal
-    .command('observer status [observers...]', 'require statuses of supplied list of observers', {})
+    .command('observer status [observers...]', 'require status of supplied list of observers', {})
     .alias('ostatus')
     .autocomplete({data:helpers.observers.autocomplete})
     .action(helpers.vorpal.action.bind(this,'root','status',[]));
 
 /* node commands */
 vorpal
-    .command('node status [observers...]', 'require node statuses of supplied list of observers', {})
+    .command('node status [observers...]', 'require node status of supplied list of observers', {})
     .alias('nstatus')
     .autocomplete({data:helpers.observers.autocomplete})
     .action(helpers.vorpal.action.bind(this,'node','status',[]));
@@ -576,7 +644,7 @@ vorpal
 
 /* experiment commands */
 vorpal
-    .command('experiment status [observers...]', 'require experiment statuses of supplied list of observers', {})
+    .command('experiment status [observers...]', 'require experiment status of supplied list of observers', {})
     .alias('estatus')
     .autocomplete({data:helpers.observers.autocomplete})
     .action(helpers.vorpal.action.bind(this,'experiment','status',[]));
@@ -610,7 +678,7 @@ vorpal
 
 /* I/O commands */
 vorpal
-    .command('io status [observers...]', 'require io statuses of supplied list of observers', {})
+    .command('io status [observers...]', 'require io status of supplied list of observers', {})
     .alias('iostatus')
     .autocomplete({data:helpers.observers.autocomplete})
     .action(helpers.vorpal.action.bind(this,'io','status',[]));
@@ -649,7 +717,7 @@ vorpal
 
 /* location commands */
 vorpal
-    .command('location status [observers...]', 'require location statuses of supplied list of observers', {})
+    .command('location status [observers...]', 'require location status of supplied list of observers', {})
     .alias('lstatus')
     .autocomplete({data:helpers.observers.autocomplete})
     .action(helpers.vorpal.action.bind(this,'location','status',[]));
@@ -671,7 +739,7 @@ vorpal
         helpers.vorpal.action.bind(this,'location','setup',[args.latitude, args.longitude])(args, callback);
     });
 vorpal
-    .command(' system status [observers...]', 'require system status, i.e. version and sync status of supplied list of observers', {})
+    .command('system status [observers...]', 'require system status, i.e. version and sync status of supplied list of observers', {})
     .alias('sstatus')
     .autocomplete({data:helpers.observers.autocomplete})
     .action(helpers.vorpal.action.bind(this,'system','status',[]));
@@ -681,10 +749,22 @@ vorpal
     .autocomplete({data:helpers.observers.autocomplete})
     .action(helpers.vorpal.action.bind(this,'system','version',[]));
 vorpal
-    .command(' system synchronization [observers...]', 'require synchronization status of supplied list of observers', {})
+    .command('system synchronization [observers...]', 'require synchronization status of supplied list of observers', {})
     .alias('ssync')
     .autocomplete({data:helpers.observers.autocomplete})
     .action(helpers.vorpal.action.bind(this,'system','synchronization',[]));
+vorpal
+    .command('system log <since> [observers...]', 'require logs of supplied list of observers', {})
+    .alias('slog')
+    .autocomplete({data:helpers.observers.autocomplete})
+    .action(function (args, callback) {
+        helpers.vorpal.action.bind(this,'system','log',[args.since])(args, callback);
+    });
+vorpal
+    .command('version', 'returns sensorlab-cli version',{})
+    .action(function (args, callback) {
+        vorpal.log('version: ' + version);
+    });
 
 
 vorpal
