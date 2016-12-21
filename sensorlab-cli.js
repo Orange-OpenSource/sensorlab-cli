@@ -502,17 +502,17 @@ vorpal
            )+
            " ------------------------------------------------------------------------- \n"+
            " - query the current device interface:                                     \n"+
-           "   > "+vorpal.chalk.cyan("node status <list of observers>")+"                                       \n"+
+           "   > "+vorpal.chalk.cyan("node status <list of observers>")+"              \n"+
            "                                                                           \n"+
            " - if the interface matches the current device, jump to section "+vorpal.chalk.yellow("#2")+"          \n"+
            " - otherwise upload the interface:                                         \n"+
            "   > "+vorpal.chalk.cyan("node setup <profile.tar.gz> <list of observers>")+"                       \n"+
            "                                                                           \n"+
            " - verify that the change is in effect:                                    \n"+
-           "   > "+vorpal.chalk.cyan("node status <list of observers>")+"                                       \n"+
+           "   > "+vorpal.chalk.cyan("node status <list of observers>")+"              \n"+
            "                                                                           \n"+
            vorpal.chalk.yellow(
-               vorpal.chalk.bold(" # 2. upload the experiment                                                \n"
+               vorpal.chalk.bold(" # 2. upload the experiment                          \n"
                )
            )+
            " ------------------------------------------------------------------------- \n"+
@@ -520,10 +520,10 @@ vorpal
            "   > "+vorpal.chalk.cyan("experiment setup <experiment_id> <profile.tar.gz> <list of observers>")+" \n"+
            "                                                                           \n"+
            " - query the experiment handler status:                                    \n"+
-           "   > "+vorpal.chalk.cyan("experiment status <list of observers>")+"                                 \n"+
+           "   > "+vorpal.chalk.cyan("experiment status <list of observers>")+"        \n"+
            "                                                                           \n"+
            vorpal.chalk.yellow(
-               vorpal.chalk.bold(" # 3. setup an experiment collector (optional)                             \n"
+               vorpal.chalk.bold(" # 3. setup an experiment collector (optional)       \n"
                )
            )+
            " ------------------------------------------------------------------------- \n"+
@@ -531,35 +531,62 @@ vorpal
            "   > "+vorpal.chalk.cyan("collector setup <experiment_id> <type: json or pcap>")+"                  \n"+
            "                                                                           \n"+
            vorpal.chalk.yellow(
-               vorpal.chalk.bold(" # 4. start the experiment                                                 \n"
+               vorpal.chalk.bold(" # 4. start the experiment                           \n"
                )
            )+
            " ------------------------------------------------------------------------- \n"+
            " - start the experiment scheduler:                                         \n"+
-           "   > "+vorpal.chalk.cyan("experiment start <list of observers>")+"                                  \n"+
+           "   > "+vorpal.chalk.cyan("experiment start <list of observers>")+"         \n"+
            "                                                                           \n"+
            " - query the experiment handler status                                     \n"+
-           "   > "+vorpal.chalk.cyan("experiment status <list of observers>")+"                                 \n"+
+           "   > "+vorpal.chalk.cyan("experiment status <list of observers>")+"        \n"+
            "                                                                           \n"+
            vorpal.chalk.yellow(
-               vorpal.chalk.bold(" # 5. clean-up                                                             \n"
+               vorpal.chalk.bold(" # 5. clean-up                                       \n"
                )
            )+
            " ------------------------------------------------------------------------- \n"+
            " - at the end of the experiment, discard collectors:                       \n"+
-           "   > "+vorpal.chalk.cyan("collector stop <experiment_id>")+"                                        \n"+
+           "   > "+vorpal.chalk.cyan("collector stop <experiment_id>")+"               \n"+
            "                                                                           \n"+
+           " ------------------------------------------------------------------------- \n"+
+
            vorpal.chalk.yellow(
-               vorpal.chalk.bold(" # 42. friendly reminder                                                   \n"
+               vorpal.chalk.bold(" # 6. submitting an issue                            \n"
+               )
+           )+
+           "                                                                           \n"+
+           " ------------------------------------------------------------------------- \n"+
+           " - collect the version numbers of the observers and your CLI client:       \n"+
+           "   > "+vorpal.chalk.cyan("system version <list of observers>")+"           \n"+
+           "   > "+vorpal.chalk.cyan("version")+"                                      \n"+
+           "                                                                           \n"+
+           " - query the observer system logs:                                         \n"+
+           "   > "+vorpal.chalk.cyan("system log <date> <list of observers>")+"        \n"+
+           "                                                                           \n"+
+           " - if system logs reports any connectivity issue related                   \n"+
+           "                 report to the network administrator                       \n"+
+           "                                                                           \n"+
+           " - if system logs reports a runtime exception, report with a github issue  \n"+
+           "   "+vorpal.chalk.cyan("TRIM ANY NON-LOCAL ADDRESS FROM LOGS BEFORE REPORTING")+"            \n"+
+           "                                                                           \n"+
+           " - else send your description of the issue along with logs to your local   \n"+
+       "                                    Sensorlab admin                            \n"+
+           " ------------------------------------------------------------------------- \n"+
+           vorpal.chalk.yellow(
+               vorpal.chalk.bold(" # 42. friendly reminder                             \n"
                )
            )+
            " ------------------------------------------------------------------------- \n"+
            " - this is a PoC, not some kind of Apollo-grade software                   \n"+
            " - even Apollo-grade mission can go wrong, Apollo 13 anyone?               \n"+
-           " - Nobody has voodoo powers, provide detailed analysis of your    \n"+
-           "   issues in a github issue.                                                             \n"+
+           " - Nobody has voodoo powers, provide detailed analysis of your             \n"+
+           "   issues in a github issue.                                               \n"+
            " - Refrain from sending mails containing exclamation marks, urgent sign    \n"+
-           "   superlative, etc. It's offensive.                                       \n"
+           "   superlative, etc. It's offensive.                                       \n"+
+           "                                                                           \n"+
+           " ------------------------------------------------------------------------- \n"
+
        );
         callback();
     });
