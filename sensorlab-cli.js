@@ -528,7 +528,7 @@ vorpal
            )+
            " ------------------------------------------------------------------------- \n"+
            " - setup a collector for the log trace you're interested in (json,pcap):   \n"+
-           "   > "+vorpal.chalk.cyan("collector setup <experiment_id> <type: json or pcap>")+"                  \n"+
+           "   > "+vorpal.chalk.cyan("collector setup <address> <port> <experiment_id> <type: json or pcap>")+"                  \n"+
            "                                                                           \n"+
            vorpal.chalk.yellow(
                vorpal.chalk.bold(" # 4. start the experiment                           \n"
