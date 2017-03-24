@@ -1,6 +1,6 @@
 {
   "name": "sensorlab-cli",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "preferGlobal": true,
   "directories": {
     "bin": "./bin"
