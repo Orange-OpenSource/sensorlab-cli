@@ -234,6 +234,22 @@ var factory = function(host, port, promise){
              */
             status: function (onSuccess, onError) {
                 partials.current_monitor('status', onSuccess, onError);
+            },
+            /**
+             * start the observer's current monitor module
+             * @param {onSuccessCallback} onSuccess
+             * @param {onErrorCallback} onError
+             */
+            start: function (onSuccess, onError) {
+                partials.current_monitor('start', onSuccess, onError);
+            },
+            /**
+             * stop the observer's current monitor module
+             * @param {onSuccessCallback} onSuccess
+             * @param {onErrorCallback} onError
+             */
+            stop: function (onSuccess, onError) {
+                partials.current_monitor('stop', onSuccess, onError);
             }
         },
         io: {
@@ -588,15 +604,47 @@ var factory = function(host, port, promise){
                 );
                 return deferred.promise;
             },
+            
             /**
              * request the observer's current monitor module status
              * @returns {Promise} the request's promise
              */
+            
             status: function () {
                 var deferred;
 
                 deferred = Q.defer();
                 commands.current_monitor.status(
+                    onSuccessWithPromise.bind(null, deferred),
+                    onErrorWithPromise.bind(null, deferred)
+                );
+                return deferred.promise;
+            },
+            
+            /**
+             * start the observer's current monitor module 
+             * @returns {Promise} the request's promise
+             */
+             
+            start: function () {
+                var deferred;
+
+                deferred = Q.defer();
+                commands.current_monitor.start(
+                    onSuccessWithPromise.bind(null, deferred),
+                    onErrorWithPromise.bind(null, deferred)
+                );
+                return deferred.promise;
+            },
+            /**
+             * stop the observer's current monitor module
+             * @returns {Promise} the request's promise
+             */
+            stop: function () {
+                var deferred;
+
+                deferred = Q.defer();
+                commands.current_monitor.stop(
                     onSuccessWithPromise.bind(null, deferred),
                     onErrorWithPromise.bind(null, deferred)
                 );

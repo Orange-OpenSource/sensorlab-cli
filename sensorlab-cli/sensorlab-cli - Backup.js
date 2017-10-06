@@ -247,20 +247,6 @@ helpers.format.location.status = function(uid, status){
     return format;
 };
 
-helpers.format.current_monitor = {};
-helpers.format.current_monitor.status = function(uid, status){
-    var format;
-
-    format = vorpal.chalk.yellow('observer ' + uid) +
-        ' State: ' + helpers.format.state(status.state) +
-        ' Calibre [A]: ' + helpers.format.property(status.calibre) +
-        ' Sampling Period [s]: ' + helpers.format.property(status.sampling_period) +
-        ' Mode: ' + helpers.format.property(status.mode) +
-        ' Measurement channel: ' + helpers.format.property(status.measurement_channel)
-            
-    return format;
-};
-
 helpers.format.system = {};
 helpers.format.system.status = function(uid, status){
     var format;
@@ -356,16 +342,6 @@ helpers.output.location = {};
 helpers.output.location.status = function(uids, statuses){
     statuses.forEach(function(status, index){
         vorpal.log(helpers.format.location.status(uids[index], status));
-    });
-};
-
-helpers.output.current_monitor = {};
-helpers.output.current_monitor.setup =
-helpers.output.current_monitor.start =
-helpers.output.current_monitor.stop =
-helpers.output.current_monitor.status = function(uids, statuses){
-    statuses.forEach(function(status, index){
-        vorpal.log(helpers.format.current_monitor.status(uids[index], status));
     });
 };
 
@@ -778,7 +754,7 @@ vorpal
     .autocomplete({data:helpers.observers.autocomplete})
     .action(helpers.vorpal.action.bind(this,'location','start',[]));
 vorpal
-    .command('location stop [observers...]', 'stop location module of supplied list of observers', {})
+    .command('location stop [observers...]', 'stop experiment of supplied list of observers', {})
     .alias('lstop')
     .autocomplete({data:helpers.observers.autocomplete})
     .action(helpers.vorpal.action.bind(this,'location','stop',[]));
@@ -789,31 +765,6 @@ vorpal
     .action(function (args, callback) {
         helpers.vorpal.action.bind(this,'location','setup',[args.latitude, args.longitude])(args, callback);
     });
-
-/* current monitor commands */
-vorpal
-    .command('current_monitor status [observers...]', 'require current_monitor status of supplied list of observers\n', {})
-    .alias('cmstatus')
-    .autocomplete({data:helpers.observers.autocomplete})
-    .action(helpers.vorpal.action.bind(this,'current_monitor','status',[]));
-vorpal
-    .command('current_monitor start [observers...]', 'start current_monitor module of supplied list of observers\n', {})
-    .alias('cmstart')
-    .autocomplete({data:helpers.observers.autocomplete})
-    .action(helpers.vorpal.action.bind(this,'current_monitor','start',[]));
-vorpal
-    .command('current_monitor stop [observers...]', 'stop current_monitor module of supplied list of observers\n', {})
-    .alias('cmstop')
-    .autocomplete({data:helpers.observers.autocomplete})
-    .action(helpers.vorpal.action.bind(this,'current_monitor','stop',[]));
-vorpal
-    .command('current_monitor setup <mode> <calibre> <measurement_channel> [observers...]', 'configure current monitor modules of supplied list of observers\nArguments:\n  *mode:\n        - 0 : Oscilloscope 1,7kHz - current\n       - 1 : Low frequency 0,9 Hz - Current\n      - 2 : Oscilloscope 0,9 kHz - current, shunt voltage, bus voltage\n  *calibre: \n     Two calibres available on "terminal channel" (0.05 and 0.1 [A]) and three calibres available on "USB channel" (0.05, 0.1 and 0.2 [A]). Change in calibre must also be done on the board by soldering the appropriate solder-jumps\n *measurement_channel:\n        0 : Terminal\n      1 : USB ', {})
-    .alias('cmsetup')
-    .autocomplete({data:helpers.observers.autocomplete})
-    .action(function (args, callback) {
-        helpers.vorpal.action.bind(this,'current_monitor','setup',[args.mode, args.calibre, args.measurement_channel])(args, callback);
-    });
-
 vorpal
     .command('system status [observers...]', 'require system status, i.e. version and sync status of supplied list of observers', {})
     .alias('sstatus')
